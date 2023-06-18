@@ -60,7 +60,7 @@ def _decode_base(log: LogResult) -> dict:
     block_time = datetime.datetime.utcfromtimestamp(log["timestamp"])
 
     return {
-        "block_number": int(log["blockNumber"], 16),
+        "block_number": int(str(log["blockNumber"]), 16),
         "timestamp": block_time.isoformat(),
         "tx_hash": log["transactionHash"],
         "log_index": int(log["logIndex"], 16),
@@ -81,7 +81,8 @@ def decode_pool_created(log: LogResult) -> dict:
         );
     """
     # Do additional lookup for the token data
-    web3 = log["event"].web3
+    web3 = log["context"]
+    # web3 = log["event"].web3
     token_cache: TokenCache = log["context"]
     result = _decode_base(log)
 
@@ -427,9 +428,10 @@ def fetch_events_to_csv(
             try:
                 # write to correct buffer
                 event_name = log_result["event"].event_name
-                buffer = buffers[event_name]["buffer"]
                 decode_function = event_mapping[event_name]["decode_function"]
-
+                if decode_function == decode_pool_created:
+                    continue
+                buffer = buffers[event_name]["buffer"]
                 buffer.append(decode_function(log_result))
             except Exception as e:
                 raise RuntimeError(f"Could not decode {log_result}") from e
